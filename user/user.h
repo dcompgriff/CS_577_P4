@@ -3,6 +3,11 @@
 
 struct stat;
 
+// Mutual exclusion lock.
+struct spinlock {
+  uint locked;
+};
+
 // system calls
 int fork(void);
 int exit(void) __attribute__((noreturn));
@@ -41,8 +46,13 @@ void* memset(void*, int, uint);
 void* malloc(uint);
 void free(void*);
 int atoi(const char*);
+
+// user library functions for threads.
 int thread_create(void (*)(void*), void*);
 int thread_join(void);
+void spin_init(struct spinlock*);
+void spin_lock(struct spinlock*);
+void spin_unlock(struct spinlock*);
 
 #endif // _USER_H_
 
