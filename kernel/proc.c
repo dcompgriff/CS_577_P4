@@ -166,7 +166,7 @@ int clone(void (*fn)(void*), void* arg, void* ustack){
   int i, pid;
   struct proc *np;
   uint sp;
-  uint ustack[3+MAXARG+1];
+  uint nustack[3+MAXARG+1];
 
   // Allocate process. TODO: Might need to copy kernel stack of parent process. Idk yet...
   if((np = allocproc()) == 0)
@@ -188,25 +188,25 @@ int clone(void (*fn)(void*), void* arg, void* ustack){
   np->cwd = idup(proc->cwd);
 
   // Set the 1 page stack reference to the address passed.
-  sp = (uint*)ustack;
+  sp = (uint)ustack;
   // Round to the top of the page address since the stack grows down.
-  sp = PGROUNDUP(ustack + 10);
+  sp = PGROUNDUP((uint)ustack + 10);
 
   // Push function argument, prepare rest of stack in ustack.
   sp -= sizeof(arg);
   // Move sp down to a 4-byte offset in the stack.
   sp &= ~3;
-  if(copyout(pgdir, sp, arg, sizeof(arg)) < 0)
+  if(copyout(np->pgdir, sp, arg, sizeof(arg)) < 0)
     goto bad;
-  ustack[1] = sp;
-  ustack[2] = 0;
+  nustack[1] = sp;
+  nustack[2] = 0;
 
   // Set the rest of the function pointers of the stack.
-  ustack[0] = 0xffffffff;  // fake return PC
+  nustack[0] = 0xffffffff;  // fake return PC
   // Move sp down so that the 3 ustack arguments (each consisting of 4 bytes) can be copied onto the sp stack.
   sp -= (3) * 4;
   // Copy the ustack arguments onto sp stack.
-  if(copyout(pgdir, sp, ustack, (3)*4) < 0)
+  if(copyout(np->pgdir, sp, nustack, (3)*4) < 0)
     goto bad;
 
   // Set eip to function address to that np starts executing the specified function.
