@@ -97,11 +97,11 @@ sys_clone(void){
   void (*fn)(void*);
 
   // Get the each argument for the clone command.
+  if(argptr(0, (void*)&fn, sizeof(*fn)) < 0)
+    return -1;
   if(argptr(1, (void*)&arg, sizeof(*arg)) < 0)
     return -1;
-  if(argptr(1, (void*)&ustack, sizeof(*ustack)) < 0)
-    return -1;
-  if(argptr(1, (void*)&fn, sizeof(*fn)) < 0)
+  if(argptr(2, (void*)&ustack, sizeof(*ustack)) < 0)
     return -1;
 
 
