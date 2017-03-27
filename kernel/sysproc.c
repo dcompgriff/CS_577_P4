@@ -88,3 +88,37 @@ sys_uptime(void)
   release(&tickslock);
   return xticks;
 }
+
+int 
+sys_clone(void){
+  //Call code to get arguments for the clone command.
+  void* arg;
+  void* ustack;
+  void (*fn)(void*);
+
+
+  
+
+
+  //Call clone function.
+  return clone(fn, arg, ustack);
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
