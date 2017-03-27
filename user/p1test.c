@@ -16,5 +16,11 @@ main(int argc, char *argv[])
     int pid = clone(&run, (void*)&i, page);
     printf(1, "Pid Status was %d.\n", pid);
 
+    void* retPage;
+    int waitPid = join(&retPage);
+    printf(1, "Parent waitPid is: %d.\n", waitPid);
+    printf(1, "page = %d; retPage = %d.\n", page, retPage);
+    free(retPage);
+
     exit();
 }

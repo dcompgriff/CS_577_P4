@@ -212,6 +212,7 @@ int clone(void (*fn)(void*), void* arg, void* ustack){
   // Set eip to function address to that np starts executing the specified function.
   np->tf->eip = (uint)fn;  // address of function to execute. TODO:Change to function pointer passed to this function.
   np->tf->esp = sp;
+  np->bsp = (uint)ustack;
 
   // Set pid and runnable state for thread.
   pid = np->pid;
@@ -286,7 +287,7 @@ wait(void)
       if(p->parent != proc)
         continue;
       havekids = 1;
-      if(p->state == ZOMBIE){
+      if(p->state == ZOMBIE && p->isThread == 0){
         // Found one.
         pid = p->pid;
         kfree(p->kstack);
@@ -311,6 +312,59 @@ wait(void)
     // Wait for children to exit.  (See wakeup1 call in proc_exit.)
     sleep(proc, &ptable.lock);  //DOC: wait-sleep
   }
+}
+
+int
+join(void** ustack){
+
+  struct proc *p;
+  int havekids, pid;
+
+  acquire(&ptable.lock);
+  for(;;){
+    // Scan through table looking for zombie children.
+    havekids = 0;
+    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+      // If p isn't a child of proc and if it isn't a thread, then continue.
+      if(p->parent != proc)
+        continue;
+      if(p->isThread == 0)
+        continue;
+      // Code point reached if p->parent == proc && p->isThread == 1.
+      havekids = 1;
+      // Process is child of parent, is a zombie, and is a thread, so free the specified resources.
+      if(p->state == ZOMBIE){
+        // Found one.
+        pid = p->pid;
+        kfree(p->kstack);
+        p->kstack = 0;
+        
+        p->state = UNUSED;
+        p->pid = 0;
+        p->parent = 0;
+        p->name[0] = 0;
+        p->killed = 0;
+
+	//Set the ustack variable to return the thread's stack space base address.
+	*ustack = (void*)p->bsp;
+
+        release(&ptable.lock);
+        return pid;
+      }
+    }
+
+    // No point waiting if we don't have any children.
+    if(!havekids || proc->killed){
+      release(&ptable.lock);
+      return -1;
+    }
+
+    // Wait for children to exit.  (See wakeup1 call in proc_exit.)
+    sleep(proc, &ptable.lock);  //DOC: wait-sleep
+  }
+
+
+  return -1;
 }
 
 // Per-CPU process scheduler.

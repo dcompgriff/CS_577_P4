@@ -109,6 +109,14 @@ sys_clone(void){
   return clone(fn, arg, ustack);
 }
 
+int
+sys_join(void){
+  void** ustack;
+  if(argptr(0, (void*)&ustack, sizeof(*ustack)) < 0)
+    return -1;
+  return join(ustack);
+}
+
 
 
 
