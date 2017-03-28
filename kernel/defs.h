@@ -111,6 +111,9 @@ void            wakeup(void*);
 void            yield(void);
 int             clone(void (*)(void*), void*, void*);
 int             join(void**);
+void            park(void);
+int             setpark(void);
+int             unpark(int pid);
 
 // swtch.S
 void            swtch(struct context**, struct context*);

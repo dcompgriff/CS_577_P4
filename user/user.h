@@ -32,6 +32,9 @@ int sleep(int);
 int uptime(void);
 int clone(void (*)(void*), void*, void*);
 int join(void**);
+void park(void);
+int setpark(void);
+int unpark(int pid);
 
 // user library functions (ulib.c)
 int stat(char*, struct stat*);

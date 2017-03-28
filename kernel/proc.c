@@ -566,3 +566,58 @@ procdump(void)
 }
 
 
+
+void park(void){
+
+
+
+
+}
+
+
+int setpark(void){
+
+
+ return -1;
+}
+
+
+int unpark(int pid){
+
+
+
+  return -1;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -118,7 +118,22 @@ sys_join(void){
 }
 
 
+int sys_park(void){
+  park();
+  return 0;
+}
 
+int sys_setpark(void){
+  return setpark();
+}
+
+int sys_unpark(void){
+  int pid;
+  if(argint(0, &pid) < 0)
+    return -1;
+
+  return unpark(pid);
+}
 
 
 
