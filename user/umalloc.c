@@ -20,11 +20,15 @@ typedef union header Header;
 
 static Header base;
 static Header *freep;
+static struct spinlock baseSpinLock = {0};
+static struct spinlock freepSpinLock = {0};
 
 void
 free(void *ap)
 {
   Header *bp, *p;
+
+  spin_lock(&freepSpinLock);
 
   bp = (Header*)ap - 1;
   for(p = freep; !(bp > p && bp < p->s.ptr); p = p->s.ptr)
@@ -41,6 +45,8 @@ free(void *ap)
   } else
     p->s.ptr = bp;
   freep = p;
+
+  spin_unlock(&freepSpinLock);
 }
 
 static Header*
@@ -66,11 +72,17 @@ malloc(uint nbytes)
   Header *p, *prevp;
   uint nunits;
 
+  spin_lock(&baseSpinLock);
+
   nunits = (nbytes + sizeof(Header) - 1)/sizeof(Header) + 1;
+  
+  spin_lock(&freepSpinLock);
   if((prevp = freep) == 0){
     base.s.ptr = freep = prevp = &base;
     base.s.size = 0;
   }
+  spin_unlock(&freepSpinLock);
+
   for(p = prevp->s.ptr; ; prevp = p, p = p->s.ptr){
     if(p->s.size >= nunits){
       if(p->s.size == nunits)
@@ -80,11 +92,26 @@ malloc(uint nbytes)
         p += p->s.size;
         p->s.size = nunits;
       }
+      spin_lock(&freepSpinLock);
       freep = prevp;
+      spin_unlock(&freepSpinLock);
+
+      spin_unlock(&baseSpinLock);
       return (void*)(p + 1);
     }
-    if(p == freep)
-      if((p = morecore(nunits)) == 0)
+
+    spin_lock(&freepSpinLock);
+    if(p == freep){
+      spin_unlock(&freepSpinLock);
+      if((p = morecore(nunits)) == 0){
+        spin_unlock(&baseSpinLock);
         return 0;
+      }
+    }else{
+      spin_lock(&freepSpinLock);
+    }
   }
+
+  spin_unlock(&baseSpinLock);
+
 }
