@@ -75,8 +75,12 @@ struct proc {
   struct inode *cwd;           // Current directory
   char name[16];               // Process name (debugging)
 
-  uint isThread;               //Determines whether this process is actually a thread or not.
-  uint bsp;                    //Base stack pointer.
+  int isParked;                // 1 If the proc is sleeping because it is parked.
+  int immediateUnpark;         // Per process flag indicating that the next park command should return immediately.
+  int setPark;                 // Per process flag indicating that the process is getting ready to park.
+
+  uint isThread;               // Determines whether this process is actually a thread or not.
+  uint bsp;                    // Base stack pointer.
 };
 
 // Process memory is laid out contiguously, low addresses first:

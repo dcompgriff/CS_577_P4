@@ -506,6 +506,87 @@ wakeup(void *chan)
   release(&ptable.lock);
 }
 
+int setpark(void){
+  int retValue = -1;
+  acquire(&ptable.lock);
+  if(!proc->immediateUnpark){
+    // If unpark wasn't called before setpark, then continue.
+    proc->setPark = 1;
+    retValue = 1;
+  }
+  release(&ptable.lock);
+  return retValue;
+}
+
+// Mark the current process as parked, and the current process to sleep.
+void park(void){
+  if(proc == 0)
+    panic("sleep");
+
+  // Must acquire ptable.lock in order to
+  // change p->state and then call sched.
+  // Once we hold ptable.lock, we can be
+  // guaranteed that we won't miss any wakeup
+  // (wakeup runs with ptable.lock locked),
+  // so it's okay to release lk.
+  acquire(&ptable.lock);
+
+  if(!proc->immediateUnpark){
+    // Go to sleep.
+    proc->state = SLEEPING;
+    proc->isParked = 1;
+    sched();
+  }else{
+    // Don't sleep, and continue executing.
+    proc->immediateUnpark = 0;
+  }
+  //Clear the setpark flag.
+  proc->setPark = 0;
+
+  // Release ptable lock.
+  release(&ptable.lock);
+}
+
+// Wake up parked process with p->pid = pid.
+// The ptable lock must be held.
+static int
+unpark1(int pid)
+{
+  struct proc *p;
+
+  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
+    if(p->state == SLEEPING && p->isParked && p->pid == pid){
+        p->state = RUNNABLE;
+        p->isParked = 0;
+        return p->pid;
+    }
+  return -1;
+}
+
+
+// Wake up a parked process with p->pid = pid.
+int
+unpark(int pid)
+{
+  int retValue = -1;
+  acquire(&ptable.lock);
+  // Error, proc not parked or ready to park.
+  if(proc->setPark == 0 && proc->isParked == 0){
+    return -1;
+  }
+
+  if(proc->setPark == 1 && proc->isParked == 0){
+    // Set park case.
+    proc->immediateUnpark = 1;
+  }else{
+    // Unpark proc.
+    retValue = unpark1(pid);
+  }
+  release(&ptable.lock);
+  return retValue;
+}
+
+
 // Kill the process with the given pid.
 // Process won't exit until it returns
 // to user space (see trap in trap.c).
@@ -565,29 +646,6 @@ procdump(void)
   }
 }
 
-
-
-void park(void){
-
-
-
-
-}
-
-
-int setpark(void){
-
-
- return -1;
-}
-
-
-int unpark(int pid){
-
-
-
-  return -1;
-}
 
 
 
