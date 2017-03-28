@@ -506,15 +506,24 @@ wakeup(void *chan)
   release(&ptable.lock);
 }
 
+
 int setpark(void){
   int retValue = -1;
-  acquire(&ptable.lock);
+  int wasHolding = 0;
+  if(!holding(&ptable.lock)){
+    acquire(&ptable.lock);
+  }else{
+    wasHolding = 1;
+  }
   if(!proc->immediateUnpark){
     // If unpark wasn't called before setpark, then continue.
     proc->setPark = 1;
     retValue = 1;
   }
-  release(&ptable.lock);
+
+  if(!wasHolding){
+    release(&ptable.lock);
+  }
   return retValue;
 }
 
@@ -529,13 +538,17 @@ void park(void){
   // guaranteed that we won't miss any wakeup
   // (wakeup runs with ptable.lock locked),
   // so it's okay to release lk.
-  acquire(&ptable.lock);
+  int wasHolding = 0;
+  if(!holding(&ptable.lock)){
+    acquire(&ptable.lock);
+  }else{
+    wasHolding = 1;
+  }
 
   if(!proc->immediateUnpark){
     // Go to sleep.
     proc->state = SLEEPING;
     proc->isParked = 1;
-    sched();
   }else{
     // Don't sleep, and continue executing.
     proc->immediateUnpark = 0;
@@ -543,8 +556,11 @@ void park(void){
   //Clear the setpark flag.
   proc->setPark = 0;
 
+  sched();
   // Release ptable lock.
-  release(&ptable.lock);
+  if(!wasHolding){
+    release(&ptable.lock);
+  }
 }
 
 // Wake up parked process with p->pid = pid.
@@ -569,20 +585,42 @@ int
 unpark(int pid)
 {
   int retValue = -1;
-  acquire(&ptable.lock);
-  // Error, proc not parked or ready to park.
-  if(proc->setPark == 0 && proc->isParked == 0){
+  struct proc *p = NULL;
+  int wasHolding = 0;
+  if(!holding(&ptable.lock)){
+    acquire(&ptable.lock);
+  }else{
+    wasHolding = 1;
+  }
+
+  // Find specified process as p.
+  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+    if(p->pid == pid){
+        break;
+    }
+  }
+  // If no proc with PID exists, return -1.
+  if(!p){
     return -1;
   }
 
-  if(proc->setPark == 1 && proc->isParked == 0){
+  // Error, proc not parked or ready to park.
+  if(p->setPark == 0 && p->isParked == 0){
+    goto releaseRet;
+  }
+
+  if(p->setPark == 1 && p->isParked == 0){
     // Set park case.
-    proc->immediateUnpark = 1;
+    p->immediateUnpark = 1;
   }else{
     // Unpark proc.
     retValue = unpark1(pid);
   }
-  release(&ptable.lock);
+
+releaseRet:
+  if(!wasHolding){
+    release(&ptable.lock);
+  }
   return retValue;
 }
 
