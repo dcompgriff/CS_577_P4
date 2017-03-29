@@ -188,9 +188,7 @@ int clone(void (*fn)(void*), void* arg, void* ustack){
   np->cwd = idup(proc->cwd);
 
   // Set the 1 page stack reference to the address passed.
-  sp = (uint)ustack;
-  // Round to the top of the page address since the stack grows down.
-  sp = PGROUNDUP((uint)ustack + 10);
+  sp = (uint)ustack + 4096;
 
   // Push function argument, prepare rest of stack in ustack.
   sp -= sizeof(arg);
