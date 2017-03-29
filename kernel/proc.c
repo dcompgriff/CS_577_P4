@@ -551,10 +551,17 @@ void park(void){
     // Don't sleep, and continue executing.
     proc->immediateUnpark = 0;
   }
-  //Clear the setpark flag.
+  // Clear the setpark flag.
   proc->setPark = 0;
 
-  sched();
+  // If this process was put to sleep, then schedule it for sleep. 
+  // (Note, if this wasn't checked, there would be a panic in the 'immediateUnpark' 
+  // case, as a process that is still in state RUNNING when sched() is called 
+  // causes a kernel panic.
+  if(proc->state == SLEEPING){
+    sched();
+  }
+
   // Release ptable lock.
   if(!wasHolding){
     release(&ptable.lock);

@@ -54,37 +54,28 @@ MUTEX CODE.
 ************************************************/
 void mutex_lock(struct mutex* mtx){
   // Aquire guard lock.
-  printf(1, "Mutex Lock Called! Current lock state is %d.\n", mtx->guard->locked);
   spin_lock(mtx->guard);
 
   if(mtx->flag == 0){
     // Set flag to indicate we are taking the open lock.
     mtx->flag = 1;
     spin_unlock(mtx->guard);
-    printf(1, "mtx flag is 0 (mutex is not locked), so thread locked it and continued.\n");
   }else{
     // We can't get the flag lock right now, so sleep until awoken.
     // When awoken, we will implicitly have the lock.
-    printf(1, "Thread can't get lock, so add itself to queue and park.\n");
     queue_add(mtx->q, getpid());
-    printf(1, "Thread added itself to the queue. Calling setpark and unlocking.\n");
     setpark();
     spin_unlock(mtx->guard);
-    printf(1, "Thread calling park.\n");
     park();
-    printf(1, "Thread woken up after park! Continuing execution.\n");
   }
 }
 
 void mutex_unlock(struct mutex* mtx){
-  printf(1, "Mutex Unlock Called! Current lock state is %d.\n", mtx->guard->locked);
   spin_lock(mtx->guard);
   if(queue_empty(mtx->q)){
-    // No more parked threads, so release the mutex flag lock.
-    printf(1, "No more parked threads, so setting flag to 0.\n");
+    // No more parked threads, so release the mutex flag lock.;
     mtx->flag = 0;
   }else{
-    printf(1, "Calling unpark for thread %d.\n", mtx->q->head->pid);
     unpark(queue_remove(mtx->q));
   }
   spin_unlock(mtx->guard);
