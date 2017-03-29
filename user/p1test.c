@@ -22,5 +22,35 @@ main(int argc, char *argv[])
     printf(1, "page = %d; retPage = %d.\n", page, retPage);
     free(retPage);
 
+    i = 10;
+    page = malloc(4096);
+    pid = clone(&run, (void*)&i, page);
+    printf(1, "Pid Status was %d.\n", pid);
+
+    waitPid = join(&retPage);
+    printf(1, "Parent waitPid is: %d.\n", waitPid);
+    printf(1, "page = %d; retPage = %d.\n", page, retPage);
+    free(retPage);
+
+    i = 10;
+    page = malloc(4096);
+    pid = clone(&run, (void*)&i, page);
+    printf(1, "Pid Status was %d.\n", pid);
+
+    waitPid = join(&retPage);
+    printf(1, "Parent waitPid is: %d.\n", waitPid);
+    printf(1, "page = %d; retPage = %d.\n", page, retPage);
+    free(retPage);
+
+    i = 10;
+    page = malloc(4096);
+    pid = clone(&run, (void*)&i, page);
+    printf(1, "Pid Status was %d.\n", pid);
+
+    waitPid = join(&retPage);
+    printf(1, "Parent waitPid is: %d.\n", waitPid);
+    printf(1, "page = %d; retPage = %d.\n", page, retPage);
+    free(retPage);
+
     exit();
 }

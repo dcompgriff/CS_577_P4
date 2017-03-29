@@ -20,15 +20,14 @@ typedef union header Header;
 
 static Header base;
 static Header *freep;
-static struct spinlock baseSpinLock = {0};
-static struct spinlock freepSpinLock = {0};
+static struct spinlock mainLock = {.locked = 0};
 
 void
 free(void *ap)
 {
   Header *bp, *p;
 
-  spin_lock(&freepSpinLock);
+  spin_lock(&mainLock);
 
   bp = (Header*)ap - 1;
   for(p = freep; !(bp > p && bp < p->s.ptr); p = p->s.ptr)
@@ -45,8 +44,31 @@ free(void *ap)
   } else
     p->s.ptr = bp;
   freep = p;
+  
+  spin_unlock(&mainLock);
+}
 
-  spin_unlock(&freepSpinLock);
+// Free function that assumes mainLock is held.
+void
+freewlock(void *ap)
+{
+  Header *bp, *p;
+
+  bp = (Header*)ap - 1;
+  for(p = freep; !(bp > p && bp < p->s.ptr); p = p->s.ptr)
+    if(p >= p->s.ptr && (bp > p || bp < p->s.ptr))
+      break;
+  if(bp + bp->s.size == p->s.ptr){
+    bp->s.size += p->s.ptr->s.size;
+    bp->s.ptr = p->s.ptr->s.ptr;
+  } else
+    bp->s.ptr = p->s.ptr;
+  if(p + p->s.size == bp){
+    p->s.size += bp->s.size;
+    p->s.ptr = bp->s.ptr;
+  } else
+    p->s.ptr = bp;
+  freep = p;
 }
 
 static Header*
@@ -62,7 +84,7 @@ morecore(uint nu)
     return 0;
   hp = (Header*)p;
   hp->s.size = nu;
-  free((void*)(hp + 1));
+  freewlock((void*)(hp + 1));
   return freep;
 }
 
@@ -72,17 +94,13 @@ malloc(uint nbytes)
   Header *p, *prevp;
   uint nunits;
 
-  spin_lock(&baseSpinLock);
+  spin_lock(&mainLock);
 
   nunits = (nbytes + sizeof(Header) - 1)/sizeof(Header) + 1;
-  
-  spin_lock(&freepSpinLock);
   if((prevp = freep) == 0){
     base.s.ptr = freep = prevp = &base;
     base.s.size = 0;
   }
-  spin_unlock(&freepSpinLock);
-
   for(p = prevp->s.ptr; ; prevp = p, p = p->s.ptr){
     if(p->s.size >= nunits){
       if(p->s.size == nunits)
@@ -92,26 +110,17 @@ malloc(uint nbytes)
         p += p->s.size;
         p->s.size = nunits;
       }
-      spin_lock(&freepSpinLock);
       freep = prevp;
-      spin_unlock(&freepSpinLock);
-
-      spin_unlock(&baseSpinLock);
+      spin_unlock(&mainLock);
       return (void*)(p + 1);
     }
-
-    spin_lock(&freepSpinLock);
     if(p == freep){
-      spin_unlock(&freepSpinLock);
       if((p = morecore(nunits)) == 0){
-        spin_unlock(&baseSpinLock);
+        spin_unlock(&mainLock);
         return 0;
       }
-    }else{
-      spin_lock(&freepSpinLock);
     }
   }
-
-  spin_unlock(&baseSpinLock);
+  spin_unlock(&mainLock);
 
 }

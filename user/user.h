@@ -5,7 +5,7 @@ struct stat;
 
 // Mutual exclusion lock.
 struct spinlock {
-  uint locked;
+  uint locked;            // Is locked.
 };
 
 // system calls
