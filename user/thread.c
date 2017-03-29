@@ -14,7 +14,6 @@ int thread_create(void (*fn)(void*), void* arg){
 int thread_join(void){
   void* stackPage;
   int retPid = join(&stackPage);
-  printf(1, "Freeing stack page allocated at %d.\n", stackPage);
   free(stackPage);
   return retPid;
 }
