@@ -8,9 +8,13 @@ struct spinlock {
   uint locked;            // Is locked.
 };
 
+/*
+PID QUEUE STRUCTS.
+*/
 // Struct to hold a pid for the pidQueue.
 typedef struct __pidStruct {
   uint pid;
+  struct mutex* pidMutex;
   struct __pidStruct* next;
 }pidStruct;
 
@@ -27,9 +31,31 @@ struct mutex {
   pidQueue* q;
 };
 
+/*
+COND QUEUE STRUCTS.
+*/
+typedef struct __condStruct {
+  uint pid;
+  struct mutex* mtx;
+  struct __condStruct* next;
+}condStruct;
+
+// Queue struct to hold the pids.
+typedef struct __condQueue {
+  condStruct* head;
+  condStruct* tail;
+  struct spinlock* clock;
+}condQueue;
+
 struct condvar {
-  int unknown;
+  condQueue* q;
 };
+
+
+
+
+
+
 
 struct semaphore {
   int unknown;
@@ -98,6 +124,11 @@ void queue_init(pidQueue* q);
 uint queue_remove(pidQueue* q);
 void queue_add(pidQueue*q, uint pid);
 int queue_empty(pidQueue* q);
+
+void cond_queue_init(condQueue* q);
+condStruct* cond_queue_remove(condQueue* q);
+void cond_queue_add(condQueue*q, uint pid, struct mutex *mtx);
+int cond_queue_empty(condQueue* q);
 
 // user library thread queue functions.
 

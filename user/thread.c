@@ -85,21 +85,126 @@ void mutex_unlock(struct mutex* mtx){
 CONDITION VARIABLE CODE.
 ************************************************/
 void cv_init(struct condvar* cv){
-
+  cv->q = (condQueue*)malloc(sizeof(condQueue));
+  cond_queue_init(cv->q);
 }
 
 void cv_wait(struct condvar* cv, struct mutex* mtx){
+  // Lock before modifying cond queue.
+  spin_lock(cv->q->clock);
+  cond_queue_add(cv->q, getpid(), mtx);
+  // Release the passed lock.
+  mutex_unlock(mtx);
+  spin_unlock(cv->q->clock);
+
+
+/*
+1) Lock on cond queue.
+2) Add process pid to queue.
+3) Call setpart.
+4) unlock mutex.
+5) unlock cond queue.
+6) park()
+7) relock mutext.
+8) return from function.
+*/
+
+
 
 }
 
 /* wake one waiting thread */
 void cv_signal(struct condvar* cv){
-
+  // Lock before modifying cond queue.
+  spin_lock(cv->q->clock);
+  if(!cond_queue_empty()){
+    condStruct* ret = cond_queue_remove();
+    spin_unlock(cv->q->clock);
+    // Re-lock on the passed lock.
+    mutex_lock(ret->mtx);
+    // Free ret.
+    free(ret);
+  }else{
+    //Queue empty, so simply release the lock.
+    spin_unlock(cv->q->clock);
+  }
 }
 
 /* wake all waiting threads */
 void cv_broadcast(struct condvar* cv){
+  condStruct* head = NULL;
+  // Lock before modifying cond queue.
+  if(!cond_queue_empty()){
+    spin_lock(cv->q->clock);
+    head = cv->q->head;
+    cv->q->head = NULL;
+    cv->q->tail = NULL;
+    spin_unlock(cv->q->clock);
+    while(head != NULL){
+      ret = cond_queue_remove();
+      curr->next = ret
+    }
 
+    condStruct* ret = cond_queue_remove();
+    spin_unlock(cv->q->clock);
+    // Re-lock on the passed lock.
+    mutex_lock(ret->mtx);
+  }else{
+    //Queue empty, so simply release the lock.
+    spin_unlock(cv->q->clock);
+  }
+}
+
+void cond_queue_init(condQueue* q){
+  q->head = NULL;
+  q->tail = NULL;
+  q->clock = (struct spinlock*)malloc(sizeof(struct spinlock));
+  spin_init(q->clock);
+}
+
+// NOTE: Caller must call free on the returned struct.
+condStruct* cond_queue_remove(condQueue* q){
+  if(cond_queue_enpty(q)){
+    return NULL;
+  }
+
+  condStruct* rem = q->head;
+  if(q->head == q->tail){
+    // List is now empty, set tail to NULL.
+    q->head = NULL;
+    q->tail = NULL;
+  }else{
+    // Move head pointer forward.
+    q->head = q->head->next;
+  }
+
+  // Get the pid, and free the struct.
+  return rem;
+}
+
+void cond_queue_add(condQueue*q, uint pid, struct mutex *mtx){
+  condStruct* new = (condStruct*)malloc(sizeof(condStruct));
+  new->pid = pid;
+  new->mtx = mtx;
+
+  if(q->head == NULL && q->tail == NULL){
+    // Empty list.
+    q->head = new;
+    q->tail = new;
+    new->next = NULL;
+  }else{
+    q->tail->next = new;
+    q->tail = new;
+    new->next = NULL;
+  }
+}
+
+int cond_queue_empty(condQueue* q){
+  if(q->head == NULL && q->tail == NULL){
+    return 1;
+  }else{
+    return 0;
+  }
 }
 
 /************************************************
