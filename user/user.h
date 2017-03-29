@@ -22,7 +22,7 @@ typedef struct __pidStruct {
 typedef struct __pidQueue {
   pidStruct* head;
   pidStruct* tail;
-    struct spinlock* clock;
+  struct spinlock* clock;
 }pidQueue;
 
 // Mutual exclusion blocking lock.
@@ -32,34 +32,16 @@ struct mutex {
   pidQueue* q;
 };
 
-/*
-COND QUEUE STRUCTS.
-*/
-typedef struct __condStruct {
-  uint pid;
-  struct mutex* mtx;
-  struct __condStruct* next;
-}condStruct;
-
-// Queue struct to hold the pids.
-typedef struct __condQueue {
-  condStruct* head;
-  condStruct* tail;
-  struct spinlock* clock;
-}condQueue;
-
+// Condition signal structure.
 struct condvar {
   pidQueue* q;
 };
 
-
-
-
-
-
-
+// Semaphore structure.
 struct semaphore {
-  int unknown;
+  int value;
+  struct condvar* cond;
+  struct mutex* mtx;
 };
 
 
@@ -125,11 +107,6 @@ void queue_init(pidQueue* q);
 uint queue_remove(pidQueue* q);
 void queue_add(pidQueue*q, uint pid);
 int queue_empty(pidQueue* q);
-
-void cond_queue_init(condQueue* q);
-condStruct* cond_queue_remove(condQueue* q);
-void cond_queue_add(condQueue*q, uint pid, struct mutex *mtx);
-int cond_queue_empty(condQueue* q);
 
 // user library thread queue functions.
 

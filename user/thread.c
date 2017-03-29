@@ -144,72 +144,31 @@ void cv_broadcast(struct condvar* cv){
   spin_unlock(cv->q->clock);
 }
 
-/*
-void cond_queue_init(condQueue* q){
-  q->head = NULL;
-  q->tail = NULL;
-  q->clock = (struct spinlock*)malloc(sizeof(struct spinlock));
-  spin_init(q->clock);
-}
-
-// NOTE: Caller must call free on the returned struct.
-condStruct* cond_queue_remove(condQueue* q){
-  if(cond_queue_enpty(q)){
-    return NULL;
-  }
-
-  condStruct* rem = q->head;
-  if(q->head == q->tail){
-    // List is now empty, set tail to NULL.
-    q->head = NULL;
-    q->tail = NULL;
-  }else{
-    // Move head pointer forward.
-    q->head = q->head->next;
-  }
-
-  // Get the pid, and free the struct.
-  return rem;
-}
-
-void cond_queue_add(condQueue*q, uint pid, struct mutex *mtx){
-  condStruct* new = (condStruct*)malloc(sizeof(condStruct));
-  new->pid = pid;
-  new->mtx = mtx;
-
-  if(q->head == NULL && q->tail == NULL){
-    // Empty list.
-    q->head = new;
-    q->tail = new;
-    new->next = NULL;
-  }else{
-    q->tail->next = new;
-    q->tail = new;
-    new->next = NULL;
-  }
-}
-
-int cond_queue_empty(condQueue* q){
-  if(q->head == NULL && q->tail == NULL){
-    return 1;
-  }else{
-    return 0;
-  }
-}
-*/
 /************************************************
 SEMAPHORE CODE.
 ************************************************/
 void sem_init(struct semaphore* sem, int initval){
-
+  sem->cond = (struct condvar*)malloc(sizeof(struct condvar));
+  cv_init(sem->cond);
+  sem->mtx = (struct mutex*)malloc(sizeof(struct mutex));
+  mutex_init(sem->mtx);
+  sem->value = initval;
 }
 
 void sem_post(struct semaphore* sem){
-
+  mutex_lock(sem->mtx);
+  sem->value++;
+  cv_signal(sem->cond);
+  mutex_unlock(sem->mtx);
 }
 
 void sem_wait(struct semaphore* sem){
-
+  mutex_lock(sem->mtx);
+  while(sem->value < 0){
+    cv_wait(sem->cond, sem->mtx);
+  }
+  sem->value--;
+  mutex_unlock(sem->mtx);
 }
 
 /************************************************

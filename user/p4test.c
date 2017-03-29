@@ -11,6 +11,19 @@ struct additionStruct {
   struct mutex* mtx;
 }mStruct;
 
+// Condvar test structs.
+struct condvar empty, fill;
+struct mutex mtx;
+
+// Semaphore test structs.
+struct semaphore sempty, sfull;
+
+
+int buffer[MAX];
+int fill_ptr = 0;
+int use_ptr = 0;
+int count = 0;
+
 void
 add(void* arg){
   while(mStruct.totalCount < 100000){
@@ -110,13 +123,6 @@ void mutex_test(){
 
 }
 
-int buffer[MAX];
-int fill_ptr = 0;
-int use_ptr = 0;
-int count = 0;
-struct condvar empty, fill;
-struct mutex mtx;
-
 void put(int value){
   buffer[fill_ptr] = value;
   fill_ptr = (fill_ptr + 1) % MAX;
@@ -173,12 +179,48 @@ void cond_consumer(void* arg){
   exit();
 }
 
+void sem_producer(void* arg){
+  int i;
+  int loops = *(int*)arg;
+  printf(1, "Prod loops %d.\n", loops);
+  for(i = 0; i < loops; i++){
+    //printf(1, "In producer.\n");
+    sem_wait(&sempty);
+    mutex_lock(&mtx);
+    //printf(1, "In producer, performing put(i).\n");
+    put(i);
+    mutex_unlock(&mtx);
+    sem_post(&sfull);
+  }
+  exit();
+}
+
+void sem_consumer(void* arg){
+  int i;
+  int loops = *(int*)arg;
+  printf(1, "Consumer loops %d.\n", loops);
+  for(i = 0; i < loops; i++){
+    //printf(1, "In consumer.\n");
+    sem_wait(&sfull);
+    mutex_lock(&mtx);
+    //printf(1, "In consumer, performing get(i).\n");
+    int tmp = get();
+    mutex_unlock(&mtx);
+    sem_post(&sempty);
+    printf(1, "%d\n", tmp);
+  }
+  exit();
+}
+
 void condition_variable_test(){
+  int final = 200;
+  int loop1 = 100;
+  fill_ptr = 0;
+  use_ptr = 0;
+  count = 0;
   cv_init(&empty);
   cv_init(&fill);
   mutex_init(&mtx);
-  int final = 200;
-  int loop1 = 100;
   
   uint t1Pid = thread_create(&cond_producer, (void*)&final);
   printf(1, "Producer thread %d created.\n", t1Pid);
@@ -201,11 +243,43 @@ void condition_variable_test(){
 
 }
 
+void semaphore_test(){
+  int final = 200;
+  int loop1 = 100;
+  fill_ptr = 0;
+  use_ptr = 0;
+  count = 0;
+  sem_init(&sempty, MAX);
+  sem_init(&sfull, 0);
+  mutex_init(&mtx);
+  
+  uint t1Pid = thread_create(&sem_producer, (void*)&final);
+  printf(1, "Producer thread %d created.\n", t1Pid);
+  uint t2Pid = thread_create(&sem_consumer, (void*)&loop1);
+  printf(1, "Consumer thread %d created.\n", t2Pid);
+  uint t3Pid = thread_create(&sem_consumer, (void*)&loop1);
+  printf(1, "Consumer thread %d created.\n", t3Pid);
+
+  /*
+  uint res1 = thread_join();
+  printf(1, "TPid %d finished.\n", res1);
+  uint res2 = thread_join();
+  printf(1, "TPid %d finished.\n", res2);
+  uint res3 = thread_join();
+  printf(1, "TPid %d finished.\n", res3);
+  */
+  thread_join();
+  thread_join();
+  thread_join();
+
+}
+
 int
 main(int argc, char *argv[])
 {
   mutex_test();
   condition_variable_test();
+  semaphore_test();
 
   exit();
 }
