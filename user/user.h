@@ -3,10 +3,38 @@
 
 struct stat;
 
-// Mutual exclusion lock.
+// Mutual exclusion spin lock.
 struct spinlock {
   uint locked;            // Is locked.
 };
+
+// Struct to hold a pid for the pidQueue.
+typedef struct __pidStruct {
+  uint pid;
+  struct __pidStruct* next;
+}pidStruct;
+
+// Queue struct to hold the pids.
+typedef struct __pidQueue {
+  pidStruct* head;
+  pidStruct* tail;
+}pidQueue;
+
+// Mutual exclusion blocking lock.
+struct mutex {
+  int flag;
+  struct spinlock* guard;
+  pidQueue* q;
+};
+
+struct condvar {
+  int unknown;
+};
+
+struct semaphore {
+  int unknown;
+};
+
 
 // system calls
 int fork(void);
@@ -56,6 +84,22 @@ int thread_join(void);
 void spin_init(struct spinlock*);
 void spin_lock(struct spinlock*);
 void spin_unlock(struct spinlock*);
+void mutex_init(struct mutex* mtx);
+void mutex_lock(struct mutex* mtx);
+void mutex_unlock(struct mutex* mtx);
+void cv_init(struct condvar* cv);
+void cv_wait(struct condvar* cv, struct mutex* mtx);
+void cv_signal(struct condvar* cv); /* wake one waiting thread */
+void cv_broadcast(struct condvar* cv); /* wake all waiting threads */
+void sem_init(struct semaphore* sem, int initval);
+void sem_post(struct semaphore* sem);
+void sem_wait(struct semaphore* sem);
+void queue_init(pidQueue* q);
+uint queue_remove(pidQueue* q);
+void queue_add(pidQueue*q, uint pid);
+int queue_empty(pidQueue* q);
+
+// user library thread queue functions.
 
 #endif // _USER_H_
 
