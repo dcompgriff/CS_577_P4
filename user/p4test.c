@@ -2,11 +2,7 @@
 #include "stat.h"
 #include "user.h"
 
-void
-run0(void* arg){
-  printf(1, "In thread.\n");
-  exit();
-}
+#define MAX 5
 
 struct additionStruct {
   int totalCount;
@@ -114,17 +110,102 @@ void mutex_test(){
 
 }
 
-void condition_variable_test(){
+int buffer[MAX];
+int fill_ptr = 0;
+int use_ptr = 0;
+int count = 0;
+struct condvar empty, fill;
+struct mutex mtx;
 
+void put(int value){
+  buffer[fill_ptr] = value;
+  fill_ptr = (fill_ptr + 1) % MAX;
+  count++;
+}
+
+int get(){
+  int tmp = buffer[use_ptr];
+  use_ptr = (use_ptr + 1) % MAX;
+  count--;
+  return tmp;
+}
+
+void cond_producer(void* arg){
+  int i;
+  int loops = *(int*)arg;
+  printf(1, "Prod loops %d.\n", loops);
+  for(i = 0; i < loops; i++){
+    //printf(1, "In producer.\n");
+    mutex_lock(&mtx);
+    while(count == MAX){
+      //printf(1, "In producer, calling wait\n");
+      cv_wait(&empty, &mtx);
+    }
+    //printf(1, "In producer, performing put(i).\n");
+    put(i);
+    //printf(1, "In producer, performing signal.\n");
+    cv_signal(&fill);
+    //printf(1, "In producer, unlocking.\n");
+    mutex_unlock(&mtx);
+  }
+  exit();
+}
+
+void cond_consumer(void* arg){
+  int i;
+  int loops = *(int*)arg;
+  printf(1, "Consumer loops %d.\n", loops);
+  for(i = 0; i < loops; i++){
+    //printf(1, "In consumer.\n");
+    mutex_lock(&mtx);
+    while(count == 0){
+      //printf(1, "In consumer, calling wait\n");
+      cv_wait(&fill, &mtx);
+    }
+    //printf(1, "In consumer, performing get(i).\n");
+    int tmp = get();
+    //printf(1, "In consumer, performing signal.\n");
+    cv_signal(&empty);
+    //printf(1, "In consumer, unlocking.\n");
+    mutex_unlock(&mtx);
+    printf(1, "%d\n", tmp);
+  }
+  exit();
+}
+
+void condition_variable_test(){
+  cv_init(&empty);
+  cv_init(&fill);
+  mutex_init(&mtx);
+  int final = 200;
+  int loop1 = 100;
+  
+  uint t1Pid = thread_create(&cond_producer, (void*)&final);
+  printf(1, "Producer thread %d created.\n", t1Pid);
+  uint t2Pid = thread_create(&cond_consumer, (void*)&loop1);
+  printf(1, "Consumer thread %d created.\n", t2Pid);
+  uint t3Pid = thread_create(&cond_consumer, (void*)&loop1);
+  printf(1, "Consumer thread %d created.\n", t3Pid);
+
+  /*
+  uint res1 = thread_join();
+  printf(1, "TPid %d finished.\n", res1);
+  uint res2 = thread_join();
+  printf(1, "TPid %d finished.\n", res2);
+  uint res3 = thread_join();
+  printf(1, "TPid %d finished.\n", res3);
+  */
+  thread_join();
+  thread_join();
+  thread_join();
 
 }
 
 int
 main(int argc, char *argv[])
 {
-  //mutex_test();
+  mutex_test();
   condition_variable_test();
-
 
   exit();
 }

@@ -101,12 +101,15 @@ void cv_init(struct condvar* cv){
 */
 void cv_wait(struct condvar* cv, struct mutex* mtx){
   // Lock before modifying cond queue.
+  //printf(1, "Trying to aquire cv spinlock in wait.\n");
   spin_lock(cv->q->clock);
+  //printf(1, "cv spinlock aquired.\n");
   queue_add(cv->q, getpid());
   setpark();
   // Release the locks.
-  mutex_unlock(mtx);
   spin_unlock(cv->q->clock);
+  mutex_unlock(mtx);
+
   // Park the process.
   park();
 
@@ -118,7 +121,9 @@ void cv_wait(struct condvar* cv, struct mutex* mtx){
 void cv_signal(struct condvar* cv){
   uint pid;
   // Lock before modifying cond queue.
+  //printf(1, "Trying to aquire cv spinlock in signal.\n");
   spin_lock(cv->q->clock);
+  //printf(1, "cv spinlock aquired.\n");
   if(!queue_empty(cv->q)){
     pid = queue_remove(cv->q);
     unpark(pid);
@@ -213,6 +218,8 @@ pidQueue CODE.
 void queue_init(pidQueue* q){
   q->head = NULL;
   q->tail = NULL;
+  q->clock = (struct spinlock*)malloc(sizeof(struct spinlock));
+  spin_init(q->clock);
 }
 
 uint queue_remove(pidQueue* q){
