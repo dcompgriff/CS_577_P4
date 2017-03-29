@@ -22,6 +22,7 @@ typedef struct __pidStruct {
 typedef struct __pidQueue {
   pidStruct* head;
   pidStruct* tail;
+    struct spinlock* clock;
 }pidQueue;
 
 // Mutual exclusion blocking lock.
@@ -48,7 +49,7 @@ typedef struct __condQueue {
 }condQueue;
 
 struct condvar {
-  condQueue* q;
+  pidQueue* q;
 };
 
 

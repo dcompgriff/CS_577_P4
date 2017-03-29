@@ -85,18 +85,9 @@ void mutex_unlock(struct mutex* mtx){
 CONDITION VARIABLE CODE.
 ************************************************/
 void cv_init(struct condvar* cv){
-  cv->q = (condQueue*)malloc(sizeof(condQueue));
-  cond_queue_init(cv->q);
+  cv->q = (pidQueue*)malloc(sizeof(pidQueue));
+  queue_init(cv->q);
 }
-
-void cv_wait(struct condvar* cv, struct mutex* mtx){
-  // Lock before modifying cond queue.
-  spin_lock(cv->q->clock);
-  cond_queue_add(cv->q, getpid(), mtx);
-  // Release the passed lock.
-  mutex_unlock(mtx);
-  spin_unlock(cv->q->clock);
-
 
 /*
 1) Lock on cond queue.
@@ -108,53 +99,47 @@ void cv_wait(struct condvar* cv, struct mutex* mtx){
 7) relock mutext.
 8) return from function.
 */
+void cv_wait(struct condvar* cv, struct mutex* mtx){
+  // Lock before modifying cond queue.
+  spin_lock(cv->q->clock);
+  queue_add(cv->q, getpid());
+  setpark();
+  // Release the locks.
+  mutex_unlock(mtx);
+  spin_unlock(cv->q->clock);
+  // Park the process.
+  park();
 
-
-
+  // Once awoken from park, re-gain the lock.
+  mutex_lock(mtx);
 }
 
 /* wake one waiting thread */
 void cv_signal(struct condvar* cv){
+  uint pid;
   // Lock before modifying cond queue.
   spin_lock(cv->q->clock);
-  if(!cond_queue_empty()){
-    condStruct* ret = cond_queue_remove();
-    spin_unlock(cv->q->clock);
-    // Re-lock on the passed lock.
-    mutex_lock(ret->mtx);
-    // Free ret.
-    free(ret);
-  }else{
-    //Queue empty, so simply release the lock.
-    spin_unlock(cv->q->clock);
+  if(!queue_empty(cv->q)){
+    pid = queue_remove(cv->q);
+    unpark(pid);
   }
+  spin_unlock(cv->q->clock);
 }
 
 /* wake all waiting threads */
 void cv_broadcast(struct condvar* cv){
-  condStruct* head = NULL;
+  uint pid;
   // Lock before modifying cond queue.
-  if(!cond_queue_empty()){
-    spin_lock(cv->q->clock);
-    head = cv->q->head;
-    cv->q->head = NULL;
-    cv->q->tail = NULL;
-    spin_unlock(cv->q->clock);
-    while(head != NULL){
-      ret = cond_queue_remove();
-      curr->next = ret
-    }
-
-    condStruct* ret = cond_queue_remove();
-    spin_unlock(cv->q->clock);
-    // Re-lock on the passed lock.
-    mutex_lock(ret->mtx);
-  }else{
-    //Queue empty, so simply release the lock.
-    spin_unlock(cv->q->clock);
+  spin_lock(cv->q->clock);
+  while(!queue_empty(cv->q)){
+    pid = queue_remove(cv->q);
+    unpark(pid);
   }
+  //Queue empty, so simply release the lock.
+  spin_unlock(cv->q->clock);
 }
 
+/*
 void cond_queue_init(condQueue* q){
   q->head = NULL;
   q->tail = NULL;
@@ -206,7 +191,7 @@ int cond_queue_empty(condQueue* q){
     return 0;
   }
 }
-
+*/
 /************************************************
 SEMAPHORE CODE.
 ************************************************/

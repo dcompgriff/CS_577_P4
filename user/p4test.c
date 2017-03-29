@@ -60,9 +60,7 @@ add2(void* arg){
   exit();
 }
 
-int
-main(int argc, char *argv[])
-{
+void mutex_test(){
   // Shared variable access test.
   int ta = 1;
   int tb = 0;
@@ -114,5 +112,40 @@ main(int argc, char *argv[])
   printf(1, "Ta, pid %d, count: %d.\n", t1Pid, mStruct.taCount);
   printf(1, "Tb, pid %d, count: %d.\n", t2Pid, mStruct.tbCount);
 
+}
+
+void condition_variable_test(){
+
+
+}
+
+int
+main(int argc, char *argv[])
+{
+  //mutex_test();
+  condition_variable_test();
+
+
   exit();
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
