@@ -5,9 +5,9 @@
 #include "x86.h"
 
 int thread_create(void (*fn)(void*), void* arg){
-  printf(1, "Before stack page allocation.\n");
+  //Use 4000 so that enough space exists for the Header, and so only 1 page of mem loads.
+  //Issues were found to occur when malloc(4096) was used.
   void* stackPage = malloc(4000);
-  printf(1, "Stack page allocated at %d.\n", stackPage);
   return clone(fn, arg, stackPage);
 }
 

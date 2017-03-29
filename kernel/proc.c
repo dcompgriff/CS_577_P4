@@ -333,7 +333,7 @@ join(void** ustack){
       // Code point reached if p->parent == proc && p->isThread == 1.
       havekids = 1;
       // Process is child of parent, is a zombie, and is a thread, so free the specified resources.
-      if(p->state == ZOMBIE){
+      if(p->state == ZOMBIE && p->isThread == 1){
         // Found one.
         pid = p->pid;
         kfree(p->kstack);
@@ -515,7 +515,7 @@ int setpark(void){
   }else{
     wasHolding = 1;
   }
-  if(!proc->immediateUnpark){
+  if(!proc->immediateUnpark && !proc->setPark){
     // If unpark wasn't called before setpark, then continue.
     proc->setPark = 1;
     retValue = 1;
