@@ -4,15 +4,17 @@
 #include "user.h"
 #include "x86.h"
 
-
 int thread_create(void (*fn)(void*), void* arg){
-  void* stackPage = malloc(4096);
+  printf(1, "Before stack page allocation.\n");
+  void* stackPage = malloc(4000);
+  printf(1, "Stack page allocated at %d.\n", stackPage);
   return clone(fn, arg, stackPage);
 }
 
 int thread_join(void){
   void* stackPage;
   int retPid = join(&stackPage);
+  printf(1, "Freeing stack page allocated at %d.\n", stackPage);
   free(stackPage);
   return retPid;
 }
