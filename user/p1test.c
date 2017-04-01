@@ -2,15 +2,20 @@
 #include "stat.h"
 #include "user.h"
 
-void
-run(void* arg){
-    printf(1, "In thread, passed %d.\n", *(int*)arg);
-    exit();
-}
+void run(void* arg);
 
 int
 main(int argc, char *argv[])
 {
+
+    int i = 33;
+    int pid = thread_create(&run, (void*)&i);
+    printf(1, "Pid Status was %d.\n", pid);
+    int retVal = thread_join();
+    printf(1, "Thread returned! Pid was %d.\n", retVal);
+    exit();
+
+/*
     int i = 10;
     void* page1 = malloc(4096);
     int pid = clone(&run, (void*)&i, page1);
@@ -54,6 +59,7 @@ main(int argc, char *argv[])
     printf(1, "Parent waitPid is: %d.\n", waitPid);
     printf(1, "page1 = %d; page2 = %d; retPage = %d.\n", page1, page2, retPage);
     free(retPage);
+*/
 
 /*
     i = 10;
@@ -86,6 +92,21 @@ main(int argc, char *argv[])
     printf(1, "page = %d; retPage = %d.\n", page, retPage);
     free(retPage);
 */
+}
 
+
+
+
+
+void
+run(void* arg){
+    printf(1, "In thread, passed %d.\n", *(int*)arg);
     exit();
 }
+
+
+
+
+
+
+

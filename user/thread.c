@@ -5,13 +5,32 @@
 #include "x86.h"
 
 int thread_create(void (*fn)(void*), void* arg){
+  printf(1, "Allocating stackpage.\n");
   void* stackPage = malloc(4096);
-  return clone(fn, arg, stackPage);
+  printf(1, "Stack page allocated at %d.\n", stackPage);
+  printf(1, "Address of function is %d.\n", (int)fn);
+  return asm_create_thread(fn, arg, stackPage);
 }
+
+/*
+Bonus Idea:
+1) Call malloc still.
+2) Add fn and arg to the allocated stackPage.
+3) In clone, get fn and arg from ustack at the first and second 4 bytes.
+4) Perform the rest of clone as usual.
+
+Trap based approach. (Make 2 system calls).
+1) Call malloc still.
+2) Call clone. (But keep the process in the SLEEP state so that it doesn't get scheduled.
+3) Call start_proc(uint pid, void (*fn)(void*), void* arg) 
+that finds the proc, sets it's p->tf->eip, initializes its stack properly, and sets it 
+to the runnable state.
+*/
 
 int thread_join(void){
   void* stackPage;
   int retPid = join(&stackPage);
+  printf(1, "Thread returned! Memaddress of stack was %d.\n", stackPage);
   free(stackPage);
   return retPid;
 }

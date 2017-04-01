@@ -67,11 +67,14 @@ int getpid(void);
 char* sbrk(int);
 int sleep(int);
 int uptime(void);
-int clone(void (*)(void*), void*, void*);
+int clone(void*);
 int join(void**);
 void park(void);
 int setpark(void);
 int unpark(int pid);
+
+// Special asm code call for thread creation with clone.
+int asm_create_thread(void (*fn)(void*), void* arg, void* ustack);
 
 // user library functions (ulib.c)
 int stat(char*, struct stat*);

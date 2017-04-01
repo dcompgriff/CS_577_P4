@@ -162,6 +162,7 @@ fork(void)
 /*
 Clone a process parent, reseting the stack to point to (ustack + PGSIZE), and start the new thread with a call to (*fn), passing it arg.
 */
+/*
 int clone(void (*fn)(void*), void* arg, void* ustack){
   int i, pid;
   struct proc *np;
@@ -208,14 +209,59 @@ int clone(void (*fn)(void*), void* arg, void* ustack){
     goto bad;
 
   // Set eip to function address to that np starts executing the specified function.
-  np->tf->eip = (uint)fn;  // address of function to execute. TODO:Change to function pointer passed to this function.
-  np->tf->esp = sp;
+  np->tf->esp = sp;        // set stack pointer to new pointer.
   np->bsp = (uint)ustack;
 
   // Set pid and runnable state for thread.
   pid = np->pid;
   np->state = RUNNABLE;
   safestrcpy(np->name, proc->name, sizeof(proc->name));
+
+  return pid;
+
+bad:
+  kfree(np->kstack);
+  np->kstack = 0;
+  np->state = UNUSED;  
+  return -1;
+}
+*/
+
+int clone(void* ustack){
+  int i, pid;
+  struct proc *np;
+  //uint sp;
+  
+  // Get the stored
+
+
+  // Allocate process. 
+  if((np = allocproc()) == 0)
+    goto bad;
+
+  // Set process isThread flag.
+  np->isThread = 1;
+
+  // Reference process state from p.
+  np->pgdir = proc->pgdir;
+  np->sz = proc->sz;
+  np->parent = proc;
+  *np->tf = *proc->tf;
+
+  // Copy file descriptors. 
+  for(i = 0; i < NOFILE; i++)
+    if(proc->ofile[i])
+      np->ofile[i] = filedup(proc->ofile[i]);
+  np->cwd = idup(proc->cwd);
+
+  np->bsp = (uint)ustack;
+  // Clear %eax so that fork returns 0 in the child.
+  np->tf->eax = 0;
+
+  // Set pid and runnable state for thread.
+  pid = np->pid;
+  np->state = RUNNABLE;
+  safestrcpy(np->name, "thread", sizeof("thread"));
 
   return pid;
 
@@ -331,7 +377,7 @@ join(void** ustack){
       // Code point reached if p->parent == proc && p->isThread == 1.
       havekids = 1;
       // Process is child of parent, is a zombie, and is a thread, so free the specified resources.
-      if(p->state == ZOMBIE && p->isThread == 1){
+      if(p->state == ZOMBIE && p->isThread == 1 && p->parent == proc){
         // Found one.
         pid = p->pid;
         kfree(p->kstack);

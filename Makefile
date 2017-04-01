@@ -38,7 +38,8 @@ CPP := cpp
 # Assembler options
 # http://sourceware.org/binutils/docs/as/Invoking.html
 AS := gcc
-ASFLAGS += -ggdb # produce debugging information for use by gdb
+ASFLAGS += -ggdb # produce debugging information for use by gdb\
+ASFLAGS += -L
 
 # Linker options
 # http://sourceware.org/binutils/docs/ld/Options.html

@@ -45,6 +45,10 @@ fetchstr(struct proc *p, uint addr, char **pp)
 int
 argint(int n, int *ip)
 {
+  int esp = proc->tf->esp;
+  if(esp == 0){
+    return -1;
+  }
   return fetchint(proc, proc->tf->esp + 4 + 4*n, ip);
 }
 
