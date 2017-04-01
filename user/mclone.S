@@ -38,6 +38,7 @@ Comp:
 				   		
 
 ThreadRet:
+	addl  $4096, %ebx
 	movl  %ebx, %ebp
 	movl  %ebx, %esp
 	pushl %edi				#Push void* arg onto stack.

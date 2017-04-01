@@ -1,6 +1,7 @@
 # This file lists files in this project which should be ignored by git.
 # Git is a version control system used to track changes to source code.
 # Generally any file which is built from the source code should be ignored.
+kernel/.__*
 
 # Compiled Object files
 *.o

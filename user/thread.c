@@ -5,10 +5,7 @@
 #include "x86.h"
 
 int thread_create(void (*fn)(void*), void* arg){
-  printf(1, "Allocating stackpage.\n");
   void* stackPage = malloc(4096);
-  printf(1, "Stack page allocated at %d.\n", stackPage);
-  printf(1, "Address of function is %d.\n", (int)fn);
   return asm_create_thread(fn, arg, stackPage);
 }
 
@@ -30,7 +27,6 @@ to the runnable state.
 int thread_join(void){
   void* stackPage;
   int retPid = join(&stackPage);
-  printf(1, "Thread returned! Memaddress of stack was %d.\n", stackPage);
   free(stackPage);
   return retPid;
 }
