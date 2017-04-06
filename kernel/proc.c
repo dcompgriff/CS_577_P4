@@ -516,7 +516,7 @@ int setpark(void){
   if(!proc->immediateUnpark && !proc->setPark){
     // If unpark wasn't called before setpark, then continue.
     proc->setPark = 1;
-    retValue = 1;
+    retValue = 0;
   }
 
   if(!wasHolding){
@@ -606,7 +606,7 @@ unpark(int pid)
   }
   // If no proc with PID exists, return -1.
   if(!p){
-    return -1;
+    goto releaseRet;
   }
 
   // Error, proc not parked or ready to park.
@@ -620,6 +620,9 @@ unpark(int pid)
   }else{
     // Unpark proc.
     retValue = unpark1(pid);
+    if(retValue != -1){
+        retValue = 0;
+    }
   }
 
 releaseRet:

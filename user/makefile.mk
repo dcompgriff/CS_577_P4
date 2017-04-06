@@ -30,7 +30,12 @@ USER_LIBS := \
 	ulib.o\
 	printf.o\
 	umalloc.o\
-	thread.o
+	threads.o\
+	spinlock.o\
+	condvar.o\
+	mutex.o\
+	semaphore.o\
+	pidqueue.o
 
 USER_LIBS := $(addprefix user/, $(USER_LIBS))
 
