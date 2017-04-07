@@ -20,14 +20,17 @@ typedef union header Header;
 
 static Header base;
 static Header *freep;
-static struct spinlock mainLock = {.locked = 0};
+
+struct spinlock mallocLock = {.locked = 0};
 
 void
 free(void *ap)
 {
   Header *bp, *p;
 
-  spin_lock(&mainLock);
+  //printf(1, "free called.\n");
+
+  spin_lock(&mallocLock);
 
   bp = (Header*)ap - 1;
   for(p = freep; !(bp > p && bp < p->s.ptr); p = p->s.ptr)
@@ -45,14 +48,16 @@ free(void *ap)
     p->s.ptr = bp;
   freep = p;
   
-  spin_unlock(&mainLock);
+  spin_unlock(&mallocLock);
 }
 
-// Free function that assumes mainLock is held.
+// Free function that assumes mallocLock is held.
 void
 freewlock(void *ap)
 {
   Header *bp, *p;
+
+  //printf(1, "freewlock called.\n");
 
   bp = (Header*)ap - 1;
   for(p = freep; !(bp > p && bp < p->s.ptr); p = p->s.ptr)
@@ -79,6 +84,7 @@ morecore(uint nu)
 
   if(nu < 4096)
     nu = 4096;
+  //printf(1, "mallocLock before sbrk is %d.\n", mallocLock.locked);
   p = sbrk(nu * sizeof(Header));
   if(p == (char*)-1)
     return 0;
@@ -93,8 +99,12 @@ malloc(uint nbytes)
 {
   Header *p, *prevp;
   uint nunits;
+  static int count = 0;
 
-  spin_lock(&mainLock);
+  spin_lock(&mallocLock);
+  count++;
+  //printf(1, "malloc called %d times.\n", count);
+  //printf(1, "mallocLock aquired.\n");
 
   nunits = (nbytes + sizeof(Header) - 1)/sizeof(Header) + 1;
 
@@ -112,16 +122,19 @@ malloc(uint nbytes)
         p->s.size = nunits;
       }
       freep = prevp;
-      spin_unlock(&mainLock);
+      //printf(1, "mallocLock released.\n");
+      spin_unlock(&mallocLock);
       return (void*)(p + 1);
     }
     if(p == freep){
       if((p = morecore(nunits)) == 0){
-        spin_unlock(&mainLock);
+        //printf(1, "mallocLock released.\n");
+        spin_unlock(&mallocLock);
         return 0;
       }
     }
   }
-  spin_unlock(&mainLock);
+  //printf(1, "mallocLock released.\n");
+  spin_unlock(&mallocLock);
 
 }

@@ -20,7 +20,10 @@ USER_PROGS := \
 	p1test\
 	p2test\
 	p3test\
-	p4test
+	p4test\
+	part2\
+	part4-cv\
+	part4-sem\
 
 USER_PROGS := $(addprefix user/, $(USER_PROGS))
 

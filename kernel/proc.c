@@ -107,16 +107,44 @@ int
 growproc(int n)
 {
   uint sz;
+  struct proc *p;
   
+  // Aquire the ptable lock so no other processes change while modifying process
+  // and thread sizes.
+  acquire(&ptable.lock);
   sz = proc->sz;
   if(n > 0){
-    if((sz = allocuvm(proc->pgdir, sz, sz + n)) == 0)
+    if((sz = allocuvm(proc->pgdir, sz, sz + n)) == 0){
+      release(&ptable.lock);
       return -1;
+    }
   } else if(n < 0){
-    if((sz = deallocuvm(proc->pgdir, sz, sz + n)) == 0)
+    if((sz = deallocuvm(proc->pgdir, sz, sz + n)) == 0){
+      release(&ptable.lock);
       return -1;
+    }
   }
   proc->sz = sz;
+
+  // Re-set the size of all threads and the parent process.
+  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+    if(p->parent == proc && p->isThread == 1){
+      // Parent grew process, so size of threads should be reset.
+      p->sz = sz;
+    }
+    if(proc->isThread == 1 && p == proc->parent){
+      // Thread grew process, so size of parent should be reset.
+      p->sz = sz;
+    }
+    if(p->parent == proc->parent && p->isThread == 1){
+      // Thread grew process, so size of sibling thread should be reset.
+      p->sz = sz;
+    }else{
+      continue;
+    }
+  }
+  release(&ptable.lock);
+
   switchuvm(proc);
   return 0;
 }
@@ -144,6 +172,8 @@ fork(void)
   np->sz = proc->sz;
   np->parent = proc;
   *np->tf = *proc->tf;
+
+  np->isThread = 0;
 
   // Clear %eax so that fork returns 0 in the child.
   np->tf->eax = 0;
@@ -191,16 +221,17 @@ int clone(void (*fn)(void*), void* arg, void* ustack){
   sp = (uint)ustack + 4096;
 
   // Push function argument, prepare rest of stack in ustack.
-  sp -= sizeof(arg);
+  //sp -= sizeof(arg);
   // Move sp down to a 4-byte offset in the stack.
-  sp &= ~3;
-  if(copyout(np->pgdir, sp, arg, sizeof(arg)) < 0)
-    goto bad;
-  nustack[1] = sp;
-  nustack[2] = 0;
+  //sp &= ~3;
+  //if(copyout(np->pgdir, sp, arg, sizeof(arg)) < 0)
+  //  goto bad;
 
   // Set the rest of the function pointers of the stack.
   nustack[0] = 0xffffffff;  // fake return PC
+  nustack[1] = (uint)arg;
+  nustack[2] = 0;
+
   // Move sp down so that the 3 ustack arguments (each consisting of 4 bytes) can be copied onto the sp stack.
   sp -= (3) * 4;
   // Copy the ustack arguments onto sp stack.

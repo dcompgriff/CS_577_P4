@@ -33,7 +33,6 @@ static void threadfunc(void* arg)
 {
 	int i;
 	struct node* n;
-
 	for (i = 0; i < (int)arg; i++) {
 		n = new_node(i);
 
