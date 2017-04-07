@@ -27,9 +27,9 @@ asm_create_thread:
 	int  $64                   		#Call the system interupt command using 'int', with '64'
 Comp:
 	cmpl  $0, %eax
-	#test %eax, %eax				#If 0 returned, then this is the thread, so jump to the thread execution label
+	#test %eax, %eax			#If 0 returned, then this is the thread, so jump to the thread execution label
 	je   ThreadRet
-	addl $8, %esp				#Pop the malloc  and ustack argument off of the stack after the interrupt returned.	(or use addl $4, %esp )
+	addl $8, %esp				#Pop the Comp and ustack argument off of the stack after the interrupt returned.
 	popl %ebx				#Restore the callee saved registers values.
 	popl %esi				
 	popl %edi
