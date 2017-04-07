@@ -17,10 +17,12 @@ USER_PROGS := \
 	usertests\
 	wc\
 	zombie\
-	p1test\
 	p2test\
 	p3test\
 	p4test\
+	part2\
+	part4-cv\
+	part4-sem\
 
 USER_PROGS := $(addprefix user/, $(USER_PROGS))
 
@@ -30,7 +32,12 @@ USER_LIBS := \
 	ulib.o\
 	printf.o\
 	umalloc.o\
-	thread.o\
+	threads.o\
+	spinlock.o\
+	condvar.o\
+	mutex.o\
+	semaphore.o\
+	pidqueue.o\
 	mclone.o
 
 USER_LIBS := $(addprefix user/, $(USER_LIBS))

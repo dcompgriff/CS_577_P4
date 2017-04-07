@@ -1,49 +1,13 @@
+#include "spinlock.h" 
+#include "threads.h"
+#include "condvar.h"
+#include "mutex.h"
+#include "semaphore.h"
+
 #ifndef _USER_H_
 #define _USER_H_
 
 struct stat;
-
-// Mutual exclusion spin lock.
-struct spinlock {
-  uint locked;            // Is locked.
-};
-
-/*
-PID QUEUE STRUCTS.
-*/
-// Struct to hold a pid for the pidQueue.
-typedef struct __pidStruct {
-  uint pid;
-  struct mutex* pidMutex;
-  struct __pidStruct* next;
-}pidStruct;
-
-// Queue struct to hold the pids.
-typedef struct __pidQueue {
-  pidStruct* head;
-  pidStruct* tail;
-  struct spinlock* clock;
-}pidQueue;
-
-// Mutual exclusion blocking lock.
-struct mutex {
-  int flag;
-  struct spinlock* guard;
-  pidQueue* q;
-};
-
-// Condition signal structure.
-struct condvar {
-  pidQueue* q;
-};
-
-// Semaphore structure.
-struct semaphore {
-  int value;
-  struct condvar* cond;
-  struct mutex* mtx;
-};
-
 
 // system calls
 int fork(void);
@@ -89,29 +53,6 @@ void* memset(void*, int, uint);
 void* malloc(uint);
 void free(void*);
 int atoi(const char*);
-
-// user library functions for threads.
-int thread_create(void (*)(void*), void*);
-int thread_join(void);
-void spin_init(struct spinlock*);
-void spin_lock(struct spinlock*);
-void spin_unlock(struct spinlock*);
-void mutex_init(struct mutex* mtx);
-void mutex_lock(struct mutex* mtx);
-void mutex_unlock(struct mutex* mtx);
-void cv_init(struct condvar* cv);
-void cv_wait(struct condvar* cv, struct mutex* mtx);
-void cv_signal(struct condvar* cv); /* wake one waiting thread */
-void cv_broadcast(struct condvar* cv); /* wake all waiting threads */
-void sem_init(struct semaphore* sem, int initval);
-void sem_post(struct semaphore* sem);
-void sem_wait(struct semaphore* sem);
-void queue_init(pidQueue* q);
-uint queue_remove(pidQueue* q);
-void queue_add(pidQueue*q, uint pid);
-int queue_empty(pidQueue* q);
-
-// user library thread queue functions.
 
 #endif // _USER_H_
 
