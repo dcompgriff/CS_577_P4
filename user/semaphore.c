@@ -17,7 +17,7 @@ void sem_init(struct semaphore* sem, int initval)
 void sem_wait(struct semaphore* sem)
 {
   mutex_lock(sem->mtx);
-  while(sem->value < 0){
+  while(sem->value <= 0){
     cv_wait(sem->cond, sem->mtx);
   }
   sem->value--;
