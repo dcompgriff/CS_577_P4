@@ -33,7 +33,6 @@ static void threadfunc(void* arg)
 {
 	int i;
 	struct node* n;
-	printf(1, "Thread Argument %d.\n", (int)arg);
 
 	for (i = 0; i < (int)arg; i++) {
 		n = new_node(i);
@@ -73,10 +72,7 @@ main(int argc, char *argv[])
 	spin_init(&lock);
 
 	for (i = 0; i < numthreads; i++) {
-		printf(1, "Address of threadfunc is %d.!\n", &threadfunc);
-		printf(1, "Calling thread create!\n");
 		pids[i] = thread_create(threadfunc, (void*)count);
-		printf(1, "Thread create called successfully. PID = %d!\n", pids[i]);
 		if (pids[i] < 1) {
 			printf(1, "oops, thread_create() failed\n");
 			exit();
