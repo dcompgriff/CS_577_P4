@@ -104,6 +104,9 @@ sys_clone(void){
   if(argptr(2, (void*)&ustack, sizeof(*ustack)) < 0)
     return -1;
 
+  if((uint)fn > proc->sz || (uint)ustack > proc->sz){
+    return -1;
+  }
 
   //Call clone function.
   return clone(fn, arg, ustack);
@@ -114,6 +117,11 @@ sys_join(void){
   void** ustack;
   if(argptr(0, (void*)&ustack, sizeof(*ustack)) < 0)
     return -1;
+
+  if((uint)ustack > proc->sz){
+    return -1;
+  }
+
   return join(ustack);
 }
 
