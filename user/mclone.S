@@ -26,9 +26,10 @@ asm_create_thread:
 	movl $22, %eax              		#Move trap #22 (For sys_clone)
 	int  $64                   		#Call the system interupt command using 'int', with '64'
 Comp:
-	test %eax, %eax				#If 0 returned, then this is the thread, so jump to the thread execution label
+	cmpl  $0, %eax
+	#test %eax, %eax				#If 0 returned, then this is the thread, so jump to the thread execution label
 	je   ThreadRet
-	#addl $4, %esp				#Pop the malloc argument off of the stack after the interrupt returned.	(or use addl $4, %esp )
+	addl $8, %esp				#Pop the malloc  and ustack argument off of the stack after the interrupt returned.	(or use addl $4, %esp )
 	popl %ebx				#Restore the callee saved registers values.
 	popl %esi				
 	popl %edi
@@ -43,5 +44,5 @@ ThreadRet:
 	movl  %ebx, %esp
 	pushl %edi				#Push void* arg onto stack.
 	pushl $0xffffffff			#Push dummy return address onto stack.
-	jmp   %esi				#Jump to the thread function address.
+	jmp   %esi
 

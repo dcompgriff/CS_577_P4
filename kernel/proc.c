@@ -189,82 +189,9 @@ fork(void)
   return pid;
 }
 
-/*
-Clone a process parent, reseting the stack to point to (ustack + PGSIZE), and start the new thread with a call to (*fn), passing it arg.
-*/
-/*
-int clone(void (*fn)(void*), void* arg, void* ustack){
-  int i, pid;
-  struct proc *np;
-  uint sp;
-  uint nustack[3+MAXARG+1];
-
-  // Allocate process. TODO: Might need to copy kernel stack of parent process. Idk yet...
-  if((np = allocproc()) == 0)
-    return -1;
-
-  // Set process isThread flag.
-  np->isThread = 1;
-
-  // Reference process state from p.
-  np->pgdir = proc->pgdir;
-  np->sz = proc->sz;
-  np->parent = proc;
-  *np->tf = *proc->tf;
-
-  // Copy file descriptors. TODO: Maybe this needs to be refrences, and not copys?
-  for(i = 0; i < NOFILE; i++)
-    if(proc->ofile[i])
-      np->ofile[i] = filedup(proc->ofile[i]);
-  np->cwd = idup(proc->cwd);
-
-  // Set the 1 page stack reference to the address passed.
-  sp = (uint)ustack + 4096;
-
-  // Push function argument, prepare rest of stack in ustack.
-  //sp -= sizeof(arg);
-  // Move sp down to a 4-byte offset in the stack.
-  //sp &= ~3;
-  //if(copyout(np->pgdir, sp, arg, sizeof(arg)) < 0)
-  //  goto bad;
-
-  // Set the rest of the function pointers of the stack.
-  nustack[0] = 0xffffffff;  // fake return PC
-  nustack[1] = (uint)arg;
-  nustack[2] = 0;
-
-  // Move sp down so that the 3 ustack arguments (each consisting of 4 bytes) can be copied onto the sp stack.
-  sp -= (3) * 4;
-  // Copy the ustack arguments onto sp stack.
-  if(copyout(np->pgdir, sp, nustack, (3)*4) < 0)
-    goto bad;
-
-  // Set eip to function address to that np starts executing the specified function.
-  np->tf->esp = sp;        // set stack pointer to new pointer.
-  np->bsp = (uint)ustack;
-
-  // Set pid and runnable state for thread.
-  pid = np->pid;
-  np->state = RUNNABLE;
-  safestrcpy(np->name, proc->name, sizeof(proc->name));
-
-  return pid;
-
-bad:
-  kfree(np->kstack);
-  np->kstack = 0;
-  np->state = UNUSED;  
-  return -1;
-}
-*/
-
 int clone(void* ustack){
   int i, pid;
   struct proc *np;
-  //uint sp;
-  
-  // Get the stored
-
 
   // Allocate process. 
   if((np = allocproc()) == 0)
