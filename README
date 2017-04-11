@@ -1,48 +1,76 @@
-xv6 is a re-implementation of Dennis Ritchie's and Ken Thompson's Unix
-Version 6 (v6).  xv6 loosely follows the structure and style of v6,
-but is implemented for a modern x86-based multiprocessor using ANSI C.
+Author: Daniel Griffin
+Date: 3/31/17
 
-ACKNOWLEDGMENTS
+************************************************
+OS Project 4: Implementing Concurrency in xv6
+************************************************
+Project Description: 
+This project consisted of 4 major parts.
 
-xv6 is inspired by John Lions's Commentary on UNIX 6th Edition (Peer
-to Peer Communications; ISBN: 1-57398-013-7; 1st edition (June 14,
-2000)). See also http://pdos.csail.mit.edu/6.828/2007/v6.html, which
-provides pointers to on-line resources for v6.
+************************************************
+Part 1
+************************************************
+Part 1 Description of Implementation:
+a) Threads were implemented as a special kind of process. Each thread has a field in the proc struct called 'isThread', that is set when the clone() function is called. These threads exist in the same process table as regular processes, so special logic was added to the fork() and wait() calls to deal with this.
+b) clone() is very similar to fork(). clone() copies the original proc's registers, pushes the passed function arguments onto the passed stack memory, and sets the trap eip register to the thread function to execute. The validity of all of these addresses are checked in the sys_clone() function before clone() is called.
+c) join() is very similar to wait(). Their logic of searching the process table is the same, however join() checks for the isThread proc field before doing anything.
+d) A special caveat for threads was also implemented in growproc(). If a parent process or thread calls malloc() and grows the process space, the parent and all sibling threads need to have their sz proc struct field updated (as these are not references to the same integer in memory). So, a loop over the proc table struct was added to growproc() to reset the size of each process/thread sharing the same memory space.
 
-xv6 borrows code from the following sources:
-    JOS (asm.h, elf.h, mmu.h, bootasm.S, ide.c, console.c, and others)
-    Plan 9 (bootother.S, mp.h, mp.c, lapic.c)
-    FreeBSD (ioapic.c)
-    NetBSD (console.c)
+************************************************
+Part 2
+************************************************
+Part 2 Description of Implementation:
+a) thread_create() simply calls malloc(4096) and passes the stack page to clone(). thread_join() passes a void pointer reference to join() to be able to return the stack page allocated for the thread. The base pointer is tracked in each thread's proc struct with bsp (base stack pointer), which is returned on a return from join().
+b) The spinlock was implemented with the atomic exchange argument, very similarly to the kernel spinlocks.
+c) The only code that was synchronized was the malloc() and free() code. A single lock was used to syncronize this code. Both malloc() and free() use the same lock to ensure that one process isn't freeing memory while another is mallocing it. However, malloc() may call morecore(), which may call free(), which can lead to deadlock. To deal with this, a second freewlock() function was created, which functions the same as free(), but without trying to re-aquire the already aquired lock.
+d) printf() could also have been synchronized, but it was stated that points would not be taken off for not synchronizing the printf() function. 
 
-The following people made contributions:
-    Russ Cox (context switching, locking)
-    Cliff Frey (MP)
-    Xiao Yu (MP)
-    Nickolai Zeldovich
-    Austin Clements
 
-In addition, we are grateful for the patches contributed by Greg
-Price, Yandong Mao, and Hitoshi Mitake.
+************************************************
+Part 3
+************************************************
+Part 3 Description of Implementation:
+a) park() works by setting a thread's state to SLEEPING, then calling sched() to schedule it to sleep. park() also checks two fields. One is 'immediateUnpark', and the other is 'setPark'. If the immediateUnpark field is set, the process clears the field and skips sleeping. If the field isn't set, the process state is set to SLEEPING, and the 'isParked' field is set to 1. setPark is also unconditionally cleared when park is called.
+b) setpark() checks 'immediateUnpark' and 'setPark'. If neither of these are set, then setPark is set to 1.
+c) unpark() first checks for the specified process matching the pid passed to it. When found, it checks the setPark and isParked fields. If setPark and isParked aren't set, then an error is generated. If setPark is set and isParked isn't set, then immediateUnpark is set. Then, unpark1() is called when searches through the process table and sets the thread's state to RUNNABLE, and clears the isParked field.
 
-The code in the files that constitute xv6 is
-Copyright 2006-2007 Frans Kaashoek, Robert Morris, and Russ Cox.
+************************************************
+Part 4
+************************************************
+Part 4 Description of Implementation:
+a) All blocking syncronization primitives use the pidQueue structure, which maintains a dynamic linked list of pids. Mutex was implemented almost identically to how it is in the course reference book using a blocking spinlock, park(), setpark(), and unpark() to implement the blocking characteristics.
+b) The condition variable primitive was implemented with a pidQueue. cv_init() initializes the pidQueue. cv_wait() synchronizes on the pidQueue with a spinlock, and uses the setpark() and park() commands to cause the process to sleep. When another process calls cv_signal(), the process is unparked, re-aquires the mutex lock, then returns from the function. cv_signal() pops one pid off of the pidQueue and calls unpark() on it (if the queue isn't empty). cv_broadcast() is the same as cv_signal(), except that every pid is removed from the queue, and has unpark called on it. This all occurs withing the pidQueue's spinlock to ensure that the queue won't be modified while this is occurring.
+c) The semaphore primitive is implemented with both a condition variable and a mutex. sem_init() initializes the mutex and condition variable. sem_post() locks on the mutex, incrementes the 'value' field, and calls cv_signal() on the condition variable. sem_wait() calls cv_wait() in a loop with in the mutex lock block, and decrements the 'value' field appropriately when the value is available to decrement.
 
-ERROR REPORTS
 
-If you spot errors or have suggestions for improvement, please send
-email to Frans Kaashoek and Robert Morris (kaashoek,rtm@csail.mit.edu). 
+************************************************
+Bonus
+************************************************
+**As an aside, this bonus took me 2.5 full days to complete.
+I had to:
+1) Learn x86 assembly.
+2) Learn the GCC C calling conventions.
+3) Learn the conventions for the int command, as well as what the xv6 setup expected when it was called (Expects a return address before the 'int' instruction).
+3) Learn how to incorporate mclone.S into the build.
+4) Learn (the hard way) that there are multiple syntaxes for x86 asm.
+5) Learn how to use gdb with assembly language code (disas, reg/cpu flag examine, x/d, etc...)
+6) Learn how to debug the x86 assembly code for the user space code (Before I found out how to load user space symbol tables, I'd set break points in the sys_clone function and step through the assembly 'ret' commands to work my way back to user space code).
+7) Learn how xv6 worked with the fork command and allocproc() to set up the new process.
 
-BUILDING AND RUNNING XV6
+Bonus Implementation Description:
+The overall breakdown of program flow is this:
+1) thread_create() is called by a user program.
+2) thread_create creates a stack page with malloc(), then calls a function implemented in assembly named "asm_create_thread(void (*fn)(void*), void* arg, void* ustack);
+3) The assembly function stores the arguments passed to it in 3 registers edi, esi, ebx (The code saves the original registers (as they are 'callee saved') before modifying the registers).
+4) The void* ustack argument is pushed onto the stack, and then the sys_clone trap instruction is called.
+5) sys_clone gets void *ustack and calls clone(). Clone sets up a new process (essentially the same as fork), but with references to the same address space. (Note that copies of ebx, edi, and esi are made here).
+6) clone then returns (with eax set to the pid), and then sys_clone returns.
+7) The trap code then returns to the mclone.S assembly code label 'Comp' (for comparison).
+8) The returned value of eax is tested (it is set to 0 for the newly created thread).
+9) If it is not 0, then the process is a parent, the stack function parameters are poped, and the state of the parent thread (including original ebx, esi, and edi regs) is restored, and the parent calls ret.
+10) If the returned eax value is 0, then the code jumps to the ThreadRet label.
+11) Here, it adds 4096 to ebx (which still holds void* ustack), sets the ebp and esp regs to this new address, pushes the argument onto the stack, pushes the dummy return function 0xffffffff onto the stack, then jumps (NOT a 'call' instruction, as this would automatically push a return address) to the address of the function (still stored in esi).
 
-To build xv6 on an x86 ELF machine (like Linux or FreeBSD), run "make".
-On non-x86 or non-ELF machines (like OS X, even on x86), you will
-need to install a cross-compiler gcc suite capable of producing x86 ELF
-binaries.  See http://pdos.csail.mit.edu/6.828/2007/tools.html.
-Then run "make TOOLPREFIX=i386-jos-elf-".
+Thus, the parent returns to running its original code, while the child continues on to run the function that was passed to it. The entire process hinges on the fact that clone makes copies of edi, esi, and ebx, which hold all of the information we need to continue execution of the thread when it returns. It should be noted that the function address isn't checked for validity in the assembly code.
 
-To run xv6, you can use Bochs or QEMU, both PC simulators.
-Bochs makes debugging easier, but QEMU is much faster. 
-To run in Bochs, run "make bochs" and then type "c" at the bochs prompt.
-To run in QEMU, run "make qemu".
 
